@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pregnancy Support Hub</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #error-container {
+            color: orange;
+            font-size: 16px;
+            margin: 12px;
+            min-height: 120px;
+            overflow-y: auto;
+            border: 1px solid orange;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #ff96000d;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="error-container"></div>
+    
+    <script type="text/babel">
+        function App() {
+            const [activeTab, setActiveTab] = React.useState('tracker');
+            const [currentWeek, setCurrentWeek] = React.useState(20);
+            const [kickCount, setKickCount] = React.useState(0);
+            const [mood, setMood] = React.useState('😊');
+            const [currentNameIndex, setCurrentNameIndex] = React.useState(0);
+            const [likedNames, setLikedNames] = React.useState([]);
+            const [wheelSpinning, setWheelSpinning] = React.useState(false);
+            const [prediction, setPrediction] = React.useState('');
+            const [lastPeriodDate, setLastPeriodDate] = React.useState('');
+            const [estimatedDeliveryDate, setEstimatedDeliveryDate] = React.useState('');
+            const [prominentFigures, setProminentFigures] = React.useState([]);
+            const [expandedFaq, setExpandedFaq] = React.useState(null);
+            const [selectedTrimester, setSelectedTrimester] = React.useState(1);
+            const [selectedSymptom, setSelectedSymptom] = React.useState('');
+            const [waterGlasses, setWaterGlasses] = React.useState(0);
+
+            const hinduBoyNames = [
+                'Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Reyansh', 'Ayaan', 'Krishna', 'Ishaan',
+                'Shaurya', 'Atharv', 'Advik', 'Pranav', 'Vedant', 'Kabir', 'Shivansh', 'Abhinav', 'Rudra', 'Samarth'
+            ];
+
+            const hinduGirlNames = [
+                'Aadhya', 'Ananya', 'Diya', 'Kavya', 'Anika', 'Saanvi', 'Priya', 'Riya', 'Kiara', 'Myra',
+                'Sara', 'Avni', 'Pari', 'Ira', 'Tara', 'Nisha', 'Meera', 'Siya', 'Arya', 'Zara'
+            ];
+
+            const allNames = [...hinduBoyNames, ...hinduGirlNames];
+
+            // Famous figures data
+            const famousFigures = {
+                1: { 1: ['J.D. Salinger', 'Betsy Ross'], 15: ['Martin Luther King Jr.'], 26: ['Republic Day India'], 30: ['Mahatma Gandhi'] },
+                2: { 12: ['Abraham Lincoln', 'Charles Darwin'], 14: ['Valentine\'s Day'], 22: ['George Washington'] },
+                3: { 8: ['International Women\'s Day'], 14: ['Albert Einstein'], 21: ['World Poetry Day'] },
+                4: { 14: ['B.R. Ambedkar', 'Shah Rukh Khan'], 22: ['Earth Day'], 28: ['Jessica Alba'] },
+                5: { 1: ['Labour Day'], 12: ['Florence Nightingale'], 26: ['John Wayne'] },
+                6: { 5: ['World Environment Day'], 21: ['International Yoga Day'], 27: ['Helen Keller'] },
+                7: { 4: ['Independence Day USA'], 15: ['Rembrandt'], 26: ['Mick Jagger'] },
+                8: { 15: ['Independence Day India'], 25: ['Sean Connery'], 29: ['Michael Jackson'] },
+                9: { 2: ['Keanu Reeves'], 15: ['Agatha Christie'], 26: ['Serena Williams'] },
+                10: { 2: ['Mahatma Gandhi'], 14: ['Dwight Eisenhower'], 31: ['Halloween'] },
+                11: { 14: ['Children\'s Day India'], 19: ['Indira Gandhi'], 26: ['Thanksgiving USA'] },
+                12: { 7: ['Pearl Harbor Day'], 25: ['Christmas Day'], 31: ['New Year\'s Eve'] }
+            };
+
+            // FAQ Data
+            const faqData = [
+                {
+                    category: "Early Pregnancy",
+                    questions: [
+                        { q: "What are the earliest signs of pregnancy?", a: "Missed period, nausea, breast tenderness, fatigue, frequent urination, and mood changes." },
+                        { q: "When should I take a pregnancy test?", a: "After you've missed your period for the most accurate results." },
+                        { q: "Is cramping normal in early pregnancy?", a: "Mild cramping is normal, but severe cramping with bleeding should be evaluated by a doctor." }
+                    ]
+                },
+                {
+                    category: "Nutrition & Diet",
+                    questions: [
+                        { q: "What foods should I avoid?", a: "Raw meats, high mercury fish, unpasteurized dairy, raw eggs, alcohol, and limit caffeine." },
+                        { q: "How much weight should I gain?", a: "Depends on pre-pregnancy BMI: Normal weight 25-35 lbs, consult your doctor." },
+                        { q: "Do I need prenatal vitamins?", a: "Yes, they provide essential nutrients like folic acid, iron, calcium, and DHA." }
+                    ]
+                },
+                {
+                    category: "Health & Safety",
+                    questions: [
+                        { q: "Is exercise safe during pregnancy?", a: "Yes, moderate exercise like walking, swimming, and prenatal yoga is beneficial." },
+                        { q: "Can I travel during pregnancy?", a: "Generally safe, especially in second trimester. Avoid travel after 36 weeks." },
+                        { q: "What medications are safe?", a: "Always consult your doctor. Generally safe: acetaminophen. Avoid: aspirin, ibuprofen." }
+                    ]
+                }
+            ];
+
+            // Symptom checker
+            const symptomChecker = {
+                "Morning Sickness": {
+                    description: "Nausea and vomiting, especially in the first trimester",
+                    remedies: ["Eat small, frequent meals", "Try ginger tea", "Avoid strong odors", "Get plenty of rest"],
+                    whenToCall: "If you can't keep fluids down for 24 hours"
+                },
+                "Back Pain": {
+                    description: "Common due to weight gain and posture changes",
+                    remedies: ["Use proper posture", "Wear supportive shoes", "Sleep with pillow between knees"],
+                    whenToCall: "If pain is severe or affects daily activities"
+                },
+                "Heartburn": {
+                    description: "Burning sensation in chest, common in later pregnancy",
+                    remedies: ["Eat smaller meals", "Avoid spicy foods", "Don't lie down after eating"],
+                    whenToCall: "If antacids don't help or symptoms worsen"
+                },
+                "Swelling": {
+                    description: "Mild swelling in feet and ankles is normal",
+                    remedies: ["Elevate feet", "Wear compression socks", "Stay hydrated"],
+                    whenToCall: "If swelling is sudden, severe, or affects face and hands"
+                }
+            };
+
+            const calculateDeliveryDate = (lmpDate) => {
+                if (!lmpDate) return '';
+                const lmp = new Date(lmpDate);
+                const deliveryDate = new Date(lmp);
+                deliveryDate.setDate(deliveryDate.getDate() + 280);
+                return deliveryDate;
+            };
+
+            const getProminentFigures = (date) => {
+                if (!date) return [];
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                
+                if (famousFigures[month] && famousFigures[month][day]) {
+                    return famousFigures[month][day];
+                }
+                
+                const monthData = famousFigures[month];
+                if (monthData) {
+                    const availableDays = Object.keys(monthData).map(Number).sort((a, b) => a - b);
+                    const closestDay = availableDays.reduce((prev, curr) => 
+                        Math.abs(curr - day) < Math.abs(prev - day) ? curr : prev
+                    );
+                    return monthData[closestDay] || [];
+                }
+                return [];
+            };
+
+            const handleDateChange = (date) => {
+                setLastPeriodDate(date);
+                const deliveryDate = calculateDeliveryDate(date);
+                setEstimatedDeliveryDate(deliveryDate);
+                
+                if (deliveryDate) {
+                    const figures = getProminentFigures(deliveryDate);
+                    setProminentFigures(figures);
+                    
+                    const today = new Date();
+                    const lmp = new Date(date);
+                    const daysDiff = Math.floor((today - lmp) / (1000 * 60 * 60 * 24));
+                    const weeks = Math.floor(daysDiff / 7);
+                    setCurrentWeek(Math.max(1, Math.min(40, weeks)));
+                }
+            };
+
+            const formatDate = (date) => {
+                if (!date) return '';
+                return date.toLocaleDateString('en-IN', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+
+            const addKick = () => setKickCount(kickCount + 1);
+            const resetKicks = () => setKickCount(0);
+            const addWater = () => setWaterGlasses(Math.min(10, waterGlasses + 1));
+
+            const nextName = () => setCurrentNameIndex((currentNameIndex + 1) % allNames.length);
+            const likeName = () => {
+                const currentName = allNames[currentNameIndex];
+                if (!likedNames.includes(currentName)) {
+                    setLikedNames([...likedNames, currentName]);
+                }
+                nextName();
+            };
+
+            const spinWheel = () => {
+                setWheelSpinning(true);
+                setTimeout(() => {
+                    const predictions = ['It\'s a Boy! 💙', 'It\'s a Girl! 💗', 'Surprise! 🎉'];
+                    setPrediction(predictions[Math.floor(Math.random() * predictions.length)]);
+                    setWheelSpinning(false);
+                }, 2000);
+            };
+
+            const openVideo = (url) => window.open(url, '_blank');
+            const toggleFaq = (index) => setExpandedFaq(expandedFaq === index ? null : index);
+
+            const TabButton = ({ id, label, icon }) => (
+                React.createElement('button', {
+                    onClick: () => setActiveTab(id),
+                    className: `flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                        activeTab === id
+                            ? 'bg-pink-500 text-white shadow-lg'
+                            : 'bg-white text-gray-600 hover:bg-pink-50'
+                    }`
+                }, 
+                React.createElement('div', { className: "flex flex-col items-center" },
+                    React.createElement('span', { className: "text-xl mb-1" }, icon),
+                    React.createElement('span', { className: "text-sm" }, label)
+                ))
+            );
+
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-pink-100 to-purple-100" },
+                React.createElement('div', { className: "container mx-auto px-4 py-6" },
+                    React.createElement('header', { className: "text-center mb-8" },
+                        React.createElement('h1', { className: "text-4xl font-bold text-pink-600 mb-2" }, '🤱 Pregnancy Support Hub'),
+                        React.createElement('p', { className: "text-gray-600" }, 'Your comprehensive companion through this beautiful journey'),
+                        React.createElement('div', { className: "mt-4 flex justify-center space-x-4 text-sm text-gray-500" },
+                            React.createElement('span', null, '📱 Mobile Friendly'),
+                            React.createElement('span', null, '👩‍⚕️ Expert Approved'),
+                            React.createElement('span', null, '🔒 Safe & Secure')
+                        )
+                    ),
+
+                    React.createElement('nav', { className: "flex flex-wrap space-x-1 mb-8 bg-white p-2 rounded-xl shadow-lg" },
+                        React.createElement(TabButton, { id: "tracker", label: "Tracker", icon: "📊" }),
+                        React.createElement(TabButton, { id: "guide", label: "Guide", icon: "📚" }),
+                        React.createElement(TabButton, { id: "nutrition", label: "Nutrition", icon: "🥗" }),
+                        React.createElement(TabButton, { id: "symptoms", label: "Symptoms", icon: "🩺" }),
+                        React.createElement(TabButton, { id: "faq", label: "FAQ", icon: "❓" }),
+                        React.createElement(TabButton, { id: "games", label: "Games", icon: "🎮" }),
+                        React.createElement(TabButton, { id: "videos", label: "Videos", icon: "📹" }),
+                        React.createElement(TabButton, { id: "hospitals", label: "Hospitals", icon: "🏥" })
+                    ),
+
+                    // Tracker Tab
+                    activeTab === 'tracker' && React.createElement('div', { className: "space-y-6" },
+                        React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-4" }, '📅 Pregnancy Calculator'),
+                            
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, 'Last Menstrual Period Date:'),
+                                React.createElement('input', {
+                                    type: "date",
+                                    value: lastPeriodDate,
+                                    onChange: (e) => handleDateChange(e.target.value),
+                                    className: "w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                                })
+                            ),
+
+                            estimatedDeliveryDate && React.createElement('div', { className: "bg-gradient-to-r from-pink-50 to-purple-50 p-4 rounded-lg mb-4" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-pink-600 mb-2" }, '🎯 Estimated Delivery Date'),
+                                React.createElement('p', { className: "text-xl font-bold text-gray-800" }, formatDate(estimatedDeliveryDate)),
+                                React.createElement('p', { className: "text-sm text-gray-600 mt-1" }, `You are currently in week ${currentWeek} of pregnancy`),
+                                React.createElement('div', { className: "mt-3 bg-white p-3 rounded-lg" },
+                                    React.createElement('div', { className: "flex justify-between text-xs text-gray-500 mb-1" },
+                                        React.createElement('span', null, 'Week 1'),
+                                        React.createElement('span', null, 'Week 40')
+                                    ),
+                                    React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2" },
+                                        React.createElement('div', {
+                                            className: "bg-gradient-to-r from-pink-400 to-purple-500 h-2 rounded-full transition-all duration-500",
+                                            style: { width: `${(currentWeek / 40) * 100}%` }
+                                        })
+                                    ),
+                                    React.createElement('p', { className: "text-center text-sm text-gray-600 mt-2" }, `${Math.round((currentWeek / 40) * 100)}% Complete`)
+                                )
+                            ),
+
+                            prominentFigures.length > 0 && React.createElement('div', { className: "bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-orange-600 mb-2" }, '⭐ Famous People Born on This Day'),
+                                React.createElement('ul', { className: "space-y-1" },
+                                    prominentFigures.map((figure, index) =>
+                                        React.createElement('li', { key: index, className: "text-gray-700 flex items-center" },
+                                            React.createElement('span', { className: "text-orange-500 mr-2" }, '🌟'),
+                                            figure
+                                        )
+                                    )
+                                ),
+                                React.createElement('p', { className: "text-xs text-gray-500 mt-2" }, 'Your baby will share their special day! ✨')
+                            )
+                        ),
+
+                        React.createElement('div', { className: "grid md:grid-cols-3 gap-6" },
+                            // Kick Counter
+                            React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                                React.createElement('h3', { className: "text-xl font-bold text-pink-600 mb-4" }, '👶 Baby Kick Counter'),
+                                React.createElement('div', { className: "text-center" },
+                                    React.createElement('div', { className: "text-6xl font-bold text-pink-500 mb-4" }, kickCount),
+                                    React.createElement('p', { className: "text-gray-600 mb-4" }, 'Kicks today'),
+                                    React.createElement('div', { className: "space-y-2" },
+                                        React.createElement('button', {
+                                            onClick: addKick,
+                                            className: "w-full bg-pink-500 text-white px-6 py-3 rounded-lg hover:bg-pink-600 transition-colors"
+                                        }, 'Add Kick 👶'),
+                                        React.createElement('button', {
+                                            onClick: resetKicks,
+                                            className: "w-full bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+                                        }, 'Reset')
+                                    ),
+                                    React.createElement('p', { className: "text-xs text-gray-500 mt-3" }, '💡 Tip: Count kicks when baby is most active')
+                                )
+                            ),
+
+                            // Mood Tracker
+                            React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                                React.createElement('h3', { className: "text-xl font-bold text-pink-600 mb-4" }, '😊 Mood Tracker'),
+                                React.createElement('div', { className: "text-center" },
+                                    React.createElement('div', { className: "text-6xl mb-4" }, mood),
+                                    React.createElement('p', { className: "text-gray-600 mb-4" }, 'How are you feeling today?'),
+                                    React.createElement('div', { className: "flex justify-center space-x-2" },
+                                        ['😊', '😴', '😰', '🤗', '😢'].map((emoji) =>
+                                            React.createElement('button', {
+                                                key: emoji,
+                                                onClick: () => setMood(emoji),
+                                                className: `text-3xl p-2 rounded-lg transition-all ${
+                                                    mood === emoji ? 'bg-pink-100 scale-110' : 'hover:bg-gray-100'
+                                                }`
+                                            }, emoji)
+                                        )
+                                    ),
+                                    React.createElement('p', { className: "text-xs text-gray-500 mt-3" }, '💡 Track your emotional wellness')
+                                )
+                            ),
+
+                            // Water Intake
+                            React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                                React.createElement('h3', { className: "text-xl font-bold text-pink-600 mb-4" }, '💧 Water Intake'),
+                                React.createElement('div', { className: "text-center" },
+                                    React.createElement('div', { className: "text-4xl mb-4" }, '🚰'),
+                                    React.createElement('p', { className: "text-gray-600 mb-4" }, 'Daily Goal: 8-10 glasses'),
+                                    React.createElement('div', { className: "grid grid-cols-5 gap-1 mb-4" },
+                                        [...Array(10)].map((_, i) =>
+                                            React.createElement('div', {
+                                                key: i,
+                                                className: `w-6 h-8 rounded border ${
+                                                    i < waterGlasses ? 'bg-blue-400 border-blue-500' : 'bg-blue-100 border-blue-200'
+                                                }`
+                                            })
+                                        )
+                                    ),
+                                    React.createElement('button', {
+                                        onClick: addWater,
+                                        className: "w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                                    }, 'Add Glass 💧'),
+                                    React.createElement('p', { className: "text-xs text-gray-500 mt-3" }, '💡 Stay hydrated for healthy pregnancy')
+                                )
+                            )
+                        )
+                    ),
+
+                    // Guide Tab
+                    activeTab === 'guide' && React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '📚 Pregnancy Guide by Trimester'),
+                        
+                        React.createElement('div', { className: "flex space-x-2 mb-6" },
+                            [1, 2, 3].map((trimester) =>
+                                React.createElement('button', {
+                                    key: trimester,
+                                    onClick: () => setSelectedTrimester(trimester),
+                                    className: `flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
+                                        selectedTrimester === trimester
+                                            ? 'bg-purple-500 text-white shadow-lg'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-purple-50'
+                                    }`
+                                }, `Trimester ${trimester}`)
+                            )
+                        ),
+
+                        React.createElement('div', { className: "bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg" },
+                            React.createElement('h3', { className: "text-xl font-bold text-purple-600 mb-4" },
+                                selectedTrimester === 1 && "First Trimester (Weeks 1-12)",
+                                selectedTrimester === 2 && "Second Trimester (Weeks 13-27)",
+                                selectedTrimester === 3 && "Third Trimester (Weeks 28-40)"
+                            ),
+                            
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                                React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                    React.createElement('h4', { className: "font-semibold text-purple-600 mb-3" }, 'Key Developments'),
+                                    selectedTrimester === 1 && React.createElement('ul', { className: "space-y-2 text-sm" },
+                                        React.createElement('li', null, '• Neural tube forms (Week 4)'),
+                                        React.createElement('li', null, '• Heart begins to beat (Week 6)'),
+                                        React.createElement('li', null, '• Major organs developing (Week 8)'),
+                                        React.createElement('li', null, '• All organs present (Week 12)')
+                                    ),
+                                    selectedTrimester === 2 && React.createElement('ul', { className: "space-y-2 text-sm" },
+                                        React.createElement('li', null, '• Gender can be determined (Week 14)'),
+                                        React.createElement('li', null, '• First movements felt (Week 16)'),
+                                        React.createElement('li', null, '• Hearing develops (Week 18)'),
+                                        React.createElement('li', null, '• Halfway point! (Week 20)')
+                                    ),
+                                    selectedTrimester === 3 && React.createElement('ul', { className: "space-y-2 text-sm" },
+                                        React.createElement('li', null, '• Rapid brain development (Week 28)'),
+                                        React.createElement('li', null, '• Bones hardening (Week 32)'),
+                                        React.createElement('li', null, '• Considered full-term soon (Week 36)'),
+                                        React.createElement('li', null, '• Ready for birth (Week 38-40)')
+                                    )
+                                ),
+                                
+                                React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                    React.createElement('h4', { className: "font-semibold text-purple-600 mb-3" }, 'Common Symptoms & Tips'),
+                                    selectedTrimester === 1 && React.createElement('div', { className: "text-sm space-y-2" },
+                                        React.createElement('p', null, React.createElement('strong', null, 'Symptoms:'), ' Morning sickness, fatigue, breast tenderness'),
+                                        React.createElement('p', null, React.createElement('strong', null, 'Tips:'), ' Take prenatal vitamins, get plenty of rest, stay hydrated')
+                                    ),
+                                    selectedTrimester === 2 && React.createElement('div', { className: "text-sm space-y-2" },
+                                        React.createElement('p', null, React.createElement('strong', null, 'Symptoms:'), ' Increased appetite, round ligament pain, heartburn'),
+                                        React.createElement('p', null, React.createElement('strong', null, 'Tips:'), ' Continue prenatal care, start thinking about baby gear')
+                                    ),
+                                    selectedTrimester === 3 && React.createElement('div', { className: "text-sm space-y-2" },
+                                        React.createElement('p', null, React.createElement('strong', null, 'Symptoms:'), ' Back pain, swelling, difficulty sleeping'),
+                                        React.createElement('p', null, React.createElement('strong', null, 'Tips:'), ' Pack hospital bag, finalize birth plan, rest when possible')
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // Nutrition Tab
+                    activeTab === 'nutrition' && React.createElement('div', { className: "space-y-6" },
+                        React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '🥗 Nutrition Guide'),
+                            
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                                React.createElement('div', null,
+                                    React.createElement('h3', { className: "text-lg font-semibold text-green-600 mb-3" }, '✅ Recommended Foods'),
+                                    React.createElement('div', { className: "space-y-3" },
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-green-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/228B22/FFFF?text=🥬", alt: "Leafy Greens", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Leafy Greens'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Rich in folate and iron')
+                                            )
+                                        ),
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-green-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/87CEEB/FFFF?text=🥛", alt: "Dairy", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Dairy Products'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Calcium for bone development')
+                                            )
+                                        ),
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-green-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/CD853F/FFFF?text=🍗", alt: "Protein", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Lean Proteins'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Essential amino acids')
+                                            )
+                                        )
+                                    )
+                                ),
+                                
+                                React.createElement('div', null,
+                                    React.createElement('h3', { className: "text-lg font-semibold text-red-600 mb-3" }, '❌ Foods to Avoid'),
+                                    React.createElement('div', { className: "space-y-3" },
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-red-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/DC143C/FFFF?text=🍣", alt: "Raw Fish", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Raw Fish & Sushi'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Risk of bacterial infection')
+                                            )
+                                        ),
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-red-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/8B0000/FFFF?text=🍷", alt: "Alcohol", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Alcohol'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Can harm baby\'s development')
+                                            )
+                                        ),
+                                        React.createElement('div', { className: "flex items-center space-x-3 p-3 bg-red-50 rounded-lg" },
+                                            React.createElement('img', { src: "https://placehold.co/60x60/A0522D/FFFF?text=☕", alt: "Caffeine", className: "rounded-lg" }),
+                                            React.createElement('div', null,
+                                                React.createElement('p', { className: "font-medium" }, 'Excessive Caffeine'),
+                                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Limit to 200mg per day')
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // Symptoms Tab
+                    activeTab === 'symptoms' && React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '🩺 Symptom Checker'),
+                        
+                        React.createElement('div', { className: "mb-6" },
+                            React.createElement('select', {
+                                value: selectedSymptom,
+                                onChange: (e) => setSelectedSymptom(e.target.value),
+                                className: "w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+                            },
+                                React.createElement('option', { value: "" }, 'Choose a symptom...'),
+                                Object.keys(symptomChecker).map((symptom) =>
+                                    React.createElement('option', { key: symptom, value: symptom }, symptom)
+                                )
+                            )
+                        ),
+
+                        selectedSymptom && React.createElement('div', { className: "bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg" },
+                            React.createElement('h3', { className: "text-xl font-bold text-blue-600 mb-3" }, selectedSymptom),
+                            React.createElement('p', { className: "text-gray-700 mb-4" }, symptomChecker[selectedSymptom].description),
+                            
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                                React.createElement('div', null,
+                                    React.createElement('h4', { className: "font-semibold text-green-600 mb-3" }, '💡 Remedies'),
+                                    React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                        React.createElement('ul', { className: "space-y-2" },
+                                            symptomChecker[selectedSymptom].remedies.map((remedy, index) =>
+                                                React.createElement('li', { key: index, className: "flex items-center text-gray-700" },
+                                                    React.createElement('span', { className: "text-green-500 mr-2" }, '✓'),
+                                                    remedy
+                                                )
+                                            )
+                                        )
+                                    )
+                                ),
+                                
+                                React.createElement('div', null,
+                                    React.createElement('h4', { className: "font-semibold text-red-600 mb-3" }, '🚨 When to Call Doctor'),
+                                    React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                        React.createElement('p', { className: "text-gray-700" }, symptomChecker[selectedSymptom].whenToCall)
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // FAQ Tab
+                    activeTab === 'faq' && React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '❓ Frequently Asked Questions'),
+                        
+                        React.createElement('div', { className: "space-y-4" },
+                            faqData.map((category, categoryIndex) =>
+                                React.createElement('div', { key: categoryIndex, className: "border border-gray-200 rounded-lg overflow-hidden" },
+                                    React.createElement('div', { className: "bg-gradient-to-r from-purple-50 to-pink-50 p-4" },
+                                        React.createElement('h3', { className: "text-lg font-semibold text-purple-600" }, category.category)
+                                    ),
+                                    React.createElement('div', { className: "divide-y divide-gray-200" },
+                                        category.questions.map((faq, faqIndex) => {
+                                            const globalIndex = categoryIndex * 100 + faqIndex;
+                                            return React.createElement('div', { key: faqIndex },
+                                                React.createElement('button', {
+                                                    onClick: () => toggleFaq(globalIndex),
+                                                    className: "w-full p-4 text-left hover:bg-gray-50 transition-colors"
+                                                },
+                                                    React.createElement('div', { className: "flex justify-between items-center" },
+                                                        React.createElement('h4', { className: "font-medium text-gray-800" }, faq.q),
+                                                        React.createElement('span', {
+                                                            className: `transform transition-transform ${
+                                                                expandedFaq === globalIndex ? 'rotate-180' : ''
+                                                            }`
+                                                        }, '▼')
+                                                    )
+                                                ),
+                                                expandedFaq === globalIndex && React.createElement('div', { className: "px-4 pb-4" },
+                                                    React.createElement('p', { className: "text-gray-600" }, faq.a)
+                                                )
+                                            );
+                                        })
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // Games Tab
+                    activeTab === 'games' && React.createElement('div', { className: "space-y-6" },
+                        React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '👶 Baby Name Game'),
+                            React.createElement('div', { className: "text-center" },
+                                React.createElement('div', { className: "text-4xl font-bold text-purple-600 mb-4" }, allNames[currentNameIndex]),
+                                React.createElement('p', { className: "text-gray-600 mb-6" }, 'Do you like this name for your baby?'),
+                                React.createElement('div', { className: "space-x-4" },
+                                    React.createElement('button', {
+                                        onClick: likeName,
+                                        className: "bg-green-500 text-white px-8 py-3 rounded-lg hover:bg-green-600 transition-colors"
+                                    }, '💚 Love it!'),
+                                    React.createElement('button', {
+                                        onClick: nextName,
+                                        className: "bg-gray-500 text-white px-8 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+                                    }, '⏭️ Next')
+                                ),
+                                likedNames.length > 0 && React.createElement('div', { className: "mt-6 p-4 bg-green-50 rounded-lg" },
+                                    React.createElement('h3', { className: "font-semibold text-green-600 mb-2" }, 'Your Favorite Names:'),
+                                    React.createElement('div', { className: "flex flex-wrap gap-2" },
+                                        likedNames.map((name, index) =>
+                                            React.createElement('span', {
+                                                key: index,
+                                                className: "bg-green-200 text-green-800 px-3 py-1 rounded-full text-sm"
+                                            }, name)
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+
+                        React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '🎯 Gender Prediction Wheel'),
+                            React.createElement('div', { className: "text-center" },
+                                React.createElement('div', {
+                                    className: `w-32 h-32 mx-auto mb-6 rounded-full border-8 border-pink-300 flex items-center justify-center text-4xl ${wheelSpinning ? 'animate-spin' : ''}`
+                                }, wheelSpinning ? '🌀' : '🎯'),
+                                React.createElement('button', {
+                                    onClick: spinWheel,
+                                    disabled: wheelSpinning,
+                                    className: "bg-pink-500 text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50"
+                                }, wheelSpinning ? 'Spinning...' : 'Spin the Wheel!'),
+                                prediction && React.createElement('div', { className: "mt-6 p-4 bg-yellow-50 rounded-lg" },
+                                    React.createElement('p', { className: "text-2xl font-bold text-yellow-600" }, prediction),
+                                    React.createElement('p', { className: "text-sm text-gray-600 mt-2" }, '*Just for fun! Only ultrasound can confirm 😊')
+                                )
+                            )
+                        )
+                    ),
+
+                    // Videos Tab
+                    activeTab === 'videos' && React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '📹 Educational Videos'),
+                        React.createElement('div', { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-6" },
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=BzVfuYsSC8Q') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/FF69B4/FFFF?text=Pregnancy+Exercises", alt: "Pregnancy Exercises", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Safe Pregnancy Exercises'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Stay fit during pregnancy')
+                            ),
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=j7YucfJuziU') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/32CD32/FFFF?text=Nutrition+Guide", alt: "Nutrition Guide", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Pregnancy Nutrition'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'What to eat for healthy pregnancy')
+                            ),
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=gAzJRHWgNGc') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/87CEEB/FFFF?text=Baby+Development", alt: "Baby Development", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Baby Development'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Week by week baby growth')
+                            ),
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=YQS71Q3k5v8') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/DDA0DD/FFFF?text=Breathing+Techniques", alt: "Breathing", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Breathing Techniques'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Relaxation and labor preparation')
+                            ),
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=lYBSLPg4h5s') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/FFB6C1/FFFF?text=Prenatal+Yoga", alt: "Prenatal Yoga", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Prenatal Yoga'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Gentle yoga for expecting mothers')
+                            ),
+                            React.createElement('div', { className: "cursor-pointer", onClick: () => openVideo('https://www.youtube.com/watch?v=8D1PexVZaYY') },
+                                React.createElement('img', { src: "https://placehold.co/300x200/F0E68C/0000?text=Labor+Prep", alt: "Labor Preparation", className: "w-full rounded-lg mb-3" }),
+                                React.createElement('h3', { className: "font-semibold text-gray-800" }, 'Labor Preparation'),
+                                React.createElement('p', { className: "text-sm text-gray-600" }, 'Getting ready for delivery')
+                            )
+                        )
+                    ),
+
+                    // Hospitals Tab
+                    activeTab === 'hospitals' && React.createElement('div', { className: "bg-white rounded-xl p-6 shadow-lg" },
+                        React.createElement('h2', { className: "text-2xl font-bold text-pink-600 mb-6" }, '🏥 Hospitals & Doctors in Hyderabad'),
+                        React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                            React.createElement('div', { className: "border border-gray-200 rounded-lg p-4" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-blue-600 mb-2" }, 'Rainbow Children\'s Hospital'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📍 Banjara Hills, Hyderabad'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📞 040-4455 5555'),
+                                React.createElement('p', { className: "text-sm text-gray-500 mb-2" }, 'Specialty: Pediatrics, Neonatology'),
+                                React.createElement('p', { className: "text-sm text-gray-700" }, 'Key Doctors: Dr. Ramesh Reddy, Dr. Sunitha Rao')
+                            ),
+                            
+                            React.createElement('div', { className: "border border-gray-200 rounded-lg p-4" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-blue-600 mb-2" }, 'Apollo Cradle'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📍 Jubilee Hills, Hyderabad'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📞 040-4424 4424'),
+                                React.createElement('p', { className: "text-sm text-gray-500 mb-2" }, 'Specialty: Maternity, Gynecology'),
+                                React.createElement('p', { className: "text-sm text-gray-700" }, 'Key Doctors: Dr. Manjula Anagani, Dr. Padmaja Divakar')
+                            ),
+
+                            React.createElement('div', { className: "border border-gray-200 rounded-lg p-4" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-blue-600 mb-2" }, 'Fernandez Hospital'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📍 Bogulkunta, Hyderabad'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📞 040-4780 8888'),
+                                React.createElement('p', { className: "text-sm text-gray-500 mb-2" }, 'Specialty: Obstetrics, Fertility'),
+                                React.createElement('p', { className: "text-sm text-gray-700" }, 'Key Doctors: Dr. Evita Fernandez, Dr. Shobha Gupta')
+                            ),
+
+                            React.createElement('div', { className: "border border-gray-200 rounded-lg p-4" },
+                                React.createElement('h3', { className: "text-lg font-semibold text-blue-600 mb-2" }, 'Cloudnine Hospital'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📍 Gachibowli, Hyderabad'),
+                                React.createElement('p', { className: "text-gray-600 mb-2" }, '📞 040-6719 9999'),
+                                React.createElement('p', { className: "text-sm text-gray-500 mb-2" }, 'Specialty: Maternity, Women\'s Health'),
+                                React.createElement('p', { className: "text-sm text-gray-700" }, 'Key Doctors: Dr. Anitha Reddy, Dr. Kavitha Kovi')
+                            )
+                        ),
+
+                        React.createElement('div', { className: "mt-8 bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-lg" },
+                            React.createElement('h3', { className: "text-lg font-semibold text-red-600 mb-3" }, '🚨 Emergency Information'),
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-4" },
+                                React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                    React.createElement('h4', { className: "font-semibold text-red-600 mb-2" }, 'Emergency Numbers:'),
+                                    React.createElement('ul', { className: "text-sm space-y-1 text-gray-700" },
+                                        React.createElement('li', null, '• Emergency: 108'),
+                                        React.createElement('li', null, '• Ambulance: 102'),
+                                        React.createElement('li', null, '• Women Helpline: 181')
+                                    )
+                                ),
+                                React.createElement('div', { className: "bg-white p-4 rounded-lg" },
+                                    React.createElement('h4', { className: "font-semibold text-red-600 mb-2" }, 'When to Call Immediately:'),
+                                    React.createElement('ul', { className: "text-sm space-y-1 text-gray-700" },
+                                        React.createElement('li', null, '• Severe abdominal pain'),
+                                        React.createElement('li', null, '• Heavy bleeding'),
+                                        React.createElement('li', null, '• Severe headaches'),
+                                        React.createElement('li', null, '• Decreased fetal movement')
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        try {
+            ReactDOM.render(React.createElement(App), document.getElementById('root'));
+        } catch(error) {
+            displayError('An error occurred while loading the application.');
+        }
+
+        window.addEventListener('error', function(event) {
+            displayError(event.message, event.error?.stack);
+        });
+
+        function displayError(message, stackInfo) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.createElement('div');
+            errorMessage.textContent = message;
+            errorContainer.appendChild(errorMessage);
+            if(stackInfo) {
+                const stackErrorMessage = document.createElement('pre');
+                stackErrorMessage.textContent = stackInfo.substring(0, 130);
+                errorContainer.appendChild(stackErrorMessage);
+            }
+            errorContainer.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
